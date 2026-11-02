@@ -1,0 +1,211 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sigen cloud login",
+        "description": "Log in with the email and password you use for the Sigen app. Leave Station ID empty to use your main station; to add another station on the same account, enter its ID (shown in the Sigen app's station settings) and add the integration once per station.",
+        "data": {
+          "region": "Region",
+          "username": "Email",
+          "password": "Password",
+          "station_id": "Station ID (optional)"
+        },
+        "data_description": {
+          "region": "The Sigen cloud your account is on (the server you pick in the Sigen app). Only Europe has been tested; promos may not be available in other regions."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sigen login expired",
+        "description": "Enter the Sigen app password for {username}.",
+        "data": {
+          "password": "Password"
+        }
+      },
+      "reconfigure": {
+        "title": "Change Sigen login",
+        "description": "Update the region, email and password used for the Sigen cloud. The login must belong to the same station.",
+        "data": {
+          "region": "Region",
+          "username": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Email or password not accepted.",
+      "cannot_connect": "Couldn't reach the Sigen cloud.",
+      "invalid_station": "That station ID wasn't found on this account.",
+      "wrong_station": "That login can't access this station."
+    },
+    "abort": {
+      "already_configured": "This Sigen station is already set up.",
+      "reauth_successful": "Logged in again.",
+      "wrong_station": "That login belongs to a different Sigen station. To switch station, delete this entry and add the integration again.",
+      "reconfigure_successful": "Login updated."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "promos": {
+        "name": "Promos"
+      },
+      "current_promo": {
+        "name": "Current promo"
+      },
+      "next_promo": {
+        "name": "Next promo"
+      }
+    }
+  },
+  "selector": {
+    "repeat": {
+      "options": {
+        "once": "Once",
+        "daily": "Daily",
+        "weekly": "Weekly"
+      }
+    },
+    "weekdays": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
+    },
+    "on_overlap": {
+      "options": {
+        "error": "Fail",
+        "replace": "Replace the overlapping promos",
+        "allow": "Keep both"
+      }
+    },
+    "region": {
+      "options": {
+        "eu": "Europe",
+        "us": "United States (untested)",
+        "apac": "Asia-Pacific (untested)",
+        "aus": "Australia / New Zealand (untested)",
+        "cn": "China (untested)"
+      }
+    }
+  },
+  "services": {
+    "add_promo": {
+      "name": "Add promo",
+      "description": "Set a promotional buy and/or sell price for a time window. Windows past midnight are split into one promo per day. Adding a promo that already exists does nothing. If the Sigen cloud can't be reached, the save is retried for about 1.5 minutes before failing.",
+      "fields": {
+        "start": {
+          "name": "Start",
+          "description": "When the promo starts (local time). For a repeating promo, the first day and the daily start time."
+        },
+        "end": {
+          "name": "End",
+          "description": "When it ends. For a repeating promo, the same day as start (a repeating promo can't cross midnight)."
+        },
+        "buy": {
+          "name": "Buy price",
+          "description": "Import price during the promo, in the same units as your Sigen tariff. Leave out to keep the normal import price."
+        },
+        "sell": {
+          "name": "Sell price",
+          "description": "Export price during the promo, in the same units as your Sigen tariff. Leave out to keep the normal export price."
+        },
+        "label": {
+          "name": "Label",
+          "description": "Name shown for this promo in Home Assistant, e.g. 'Axle event'. Stored in Home Assistant only; the Sigen app doesn't show it."
+        },
+        "replace_label": {
+          "name": "Replace same label",
+          "description": "Remove promos with the same label that haven't started yet, so the label always means one window (e.g. the next Axle event moved or changed)."
+        },
+        "repeat": {
+          "name": "Repeat",
+          "description": "Once, every day, or on chosen weekdays."
+        },
+        "weekdays": {
+          "name": "Weekdays",
+          "description": "Days for a weekly promo."
+        },
+        "until": {
+          "name": "Until",
+          "description": "Last day of a repeating promo. Required when repeating."
+        },
+        "on_overlap": {
+          "name": "If it overlaps",
+          "description": "What to do if an existing promo overlaps this one."
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": "Only needed with more than one Sigen station."
+        }
+      }
+    },
+    "remove_promo": {
+      "name": "Remove promo",
+      "description": "Remove promos by label, by time window, or both. Promos that have already started are kept unless 'include started' is on.",
+      "fields": {
+        "label": {
+          "name": "Label",
+          "description": "Remove promos with this label."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Remove promos overlapping this window (give end too)."
+        },
+        "end": {
+          "name": "End",
+          "description": "End of the window."
+        },
+        "include_started": {
+          "name": "Include started",
+          "description": "Also remove promos that are running or have already started."
+        },
+        "config_entry_id": {
+          "name": "Station",
+          "description": "Only needed with more than one Sigen station."
+        }
+      }
+    },
+    "clear_promos": {
+      "name": "Clear promos",
+      "description": "Remove every promo on the station.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Station",
+          "description": "Only needed with more than one Sigen station."
+        }
+      }
+    },
+    "list_promos": {
+      "name": "List promos",
+      "description": "Return every current and upcoming promo.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Station",
+          "description": "Only needed with more than one Sigen station."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sigen promotional tariffs",
+        "description": "How often to re-read promos from the Sigen cloud. Changes made by this integration show up straight away; this only affects promos changed elsewhere, such as in the Sigen app.",
+        "data": {
+          "scan_interval": "Refresh every"
+        }
+      }
+    }
+  },
+  "issues": {
+    "save_failed": {
+      "title": "Sigen promo not saved ({station})",
+      "description": "A promo change couldn't be saved to the Sigen cloud:\n\n{error}\n\nAutomations that re-check on a schedule will try again. This message goes away after the next successful save."
+    }
+  }
+}

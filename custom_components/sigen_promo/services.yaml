@@ -1,0 +1,109 @@
+add_promo:
+  fields:
+    start:
+      required: true
+      example: "2026-11-05 03:00:00"
+      selector:
+        datetime:
+    end:
+      required: true
+      example: "2026-11-05 04:00:00"
+      selector:
+        datetime:
+    buy:
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.01
+          mode: box
+    sell:
+      example: 15
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.01
+          mode: box
+    label:
+      example: Axle event
+      selector:
+        text:
+    replace_label:
+      default: false
+      selector:
+        boolean:
+    repeat:
+      default: once
+      selector:
+        select:
+          translation_key: repeat
+          options:
+            - once
+            - daily
+            - weekly
+    weekdays:
+      selector:
+        select:
+          multiple: true
+          translation_key: weekdays
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+    until:
+      selector:
+        date:
+    on_overlap:
+      default: error
+      selector:
+        select:
+          translation_key: on_overlap
+          options:
+            - error
+            - replace
+            - allow
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: sigen_promo
+
+remove_promo:
+  fields:
+    label:
+      example: Axle event
+      selector:
+        text:
+    start:
+      selector:
+        datetime:
+    end:
+      selector:
+        datetime:
+    include_started:
+      default: false
+      selector:
+        boolean:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: sigen_promo
+
+clear_promos:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: sigen_promo
+
+list_promos:
+  fields:
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: sigen_promo

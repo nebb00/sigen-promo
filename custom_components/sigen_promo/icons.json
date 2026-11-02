@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "sensor": {
+      "promos": {
+        "default": "mdi:tag-multiple"
+      },
+      "current_promo": {
+        "default": "mdi:tag-check"
+      },
+      "next_promo": {
+        "default": "mdi:tag-arrow-right"
+      }
+    }
+  },
+  "services": {
+    "add_promo": {
+      "service": "mdi:tag-plus"
+    },
+    "remove_promo": {
+      "service": "mdi:tag-minus"
+    },
+    "clear_promos": {
+      "service": "mdi:tag-off"
+    },
+    "list_promos": {
+      "service": "mdi:tag-search"
+    }
+  }
+}
