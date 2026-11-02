@@ -24,6 +24,9 @@
     },
     "list_promos": {
       "service": "mdi:tag-search"
+    },
+    "sync_promos": {
+      "service": "mdi:tag-arrow-up-down"
     }
   }
 }

@@ -73,6 +73,47 @@ add_promo:
         config_entry:
           integration: sigen_promo
 
+sync_promos:
+  fields:
+    label:
+      required: true
+      example: EDF free electricity
+      selector:
+        text:
+    windows:
+      required: true
+      example: '[{"start": "2026-11-05 23:00", "end": "2026-11-06 00:00"}]'
+      selector:
+        object:
+    buy:
+      example: 0
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.01
+          mode: box
+    sell:
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 0.01
+          mode: box
+    on_overlap:
+      default: replace
+      selector:
+        select:
+          translation_key: on_overlap
+          options:
+            - error
+            - replace
+            - allow
+    config_entry_id:
+      selector:
+        config_entry:
+          integration: sigen_promo
+
 remove_promo:
   fields:
     label:

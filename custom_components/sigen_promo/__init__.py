@@ -89,6 +89,19 @@ REMOVE_SCHEMA = vol.All(
     ),
     cv.has_at_least_one_key("label", "start"),
 )
+WINDOW = vol.Schema({vol.Required("start"): cv.datetime, vol.Required("end"): cv.datetime}, extra=vol.ALLOW_EXTRA)
+SYNC_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTRY): cv.string,
+        vol.Required("label"): LABEL,
+        vol.Required("windows"): vol.All(cv.ensure_list, [WINDOW]),
+        vol.Optional("buy"): vol.Any(None, PRICE),
+        vol.Optional("sell"): vol.Any(None, PRICE),
+        vol.Optional("on_overlap", default=OVERLAP_REPLACE): vol.In(
+            [OVERLAP_ERROR, OVERLAP_REPLACE, OVERLAP_ALLOW]
+        ),
+    }
+)
 ENTRY_ONLY_SCHEMA = vol.Schema({vol.Optional(ATTR_ENTRY): cv.string})
 
 type SigenConfigEntry = ConfigEntry[SigenPromoCoordinator]
@@ -304,6 +317,69 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             "promos": [coord.readable(p) for p in after],
         }
 
+    async def sync_promos(call: ServiceCall) -> ServiceResponse:
+        """Make a label's upcoming one-off promos match a list of windows, in one save.
+
+        Windows that are missing get added, promos with this label whose window is no
+        longer listed are removed (unless already started), and nothing is saved if
+        they already match. Meant for sources that list several windows, such as a
+        calendar of free electricity sessions.
+        """
+        coord = coordinator_for(call)
+        data = call.data
+        buy, sell, label = data.get("buy"), data.get("sell"), data["label"]
+        if buy is None and sell is None:
+            raise HomeAssistantError("Give buy, sell or both")
+        now = coord.now()
+        today = now.replace(hour=0, minute=0)
+        wanted: list[dict[str, Any]] = []
+        for w in data["windows"]:
+            start, end = local(w["start"], coord), local(w["end"], coord)
+            if end <= now:
+                continue  # already over
+            try:
+                pieces = split_window(max(start, today), end)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+            wanted += [make_promo(d, s, e, buy, sell) for d, s, e in pieces]
+        mode = data["on_overlap"]
+        added: list[dict[str, Any]] = []
+        removed: list[dict[str, Any]] = []
+
+        def edit(current: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+            added.clear()
+            removed.clear()
+            stale = [
+                c for c in current
+                if coord.label_of(c) == label and not _started(c, coord)
+                and not any(same_promo(c, p) for p in wanted)
+            ]
+            keep = [c for c in current if c not in stale]
+            todo = [p for p in wanted if not any(same_promo(p, c) for c in keep)]
+            clashes = [c for c in keep if any(overlaps(c, p) for p in todo)]
+            if clashes and mode == OVERLAP_ERROR:
+                raise HomeAssistantError(
+                    "Overlaps existing promo(s): "
+                    + "; ".join(describe(c, coord.label_of(c)) for c in clashes)
+                    + ". Remove them first, or set on_overlap to replace or allow."
+                )
+            if mode == OVERLAP_REPLACE:
+                stale += clashes
+                keep = [c for c in keep if c not in clashes]
+            added.extend(todo)
+            removed.extend(stale)
+            if not todo and not stale:
+                return None  # already in sync
+            return keep + todo
+
+        before = dict(coord.labels)
+        after = await coord.change(edit, {promo_key(p): label for p in wanted})
+        return {
+            "added": [coord.readable(p) for p in added],
+            "removed": [readable(p, before.get(promo_key(p)), coord.now()) for p in removed],
+            "promos": [coord.readable(p) for p in after],
+        }
+
     async def remove_promo(call: ServiceCall) -> ServiceResponse:
         coord = coordinator_for(call)
         data = call.data
@@ -361,6 +437,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     optional = SupportsResponse.OPTIONAL
     hass.services.async_register(DOMAIN, "add_promo", add_promo, ADD_SCHEMA, supports_response=optional)
     hass.services.async_register(DOMAIN, "remove_promo", remove_promo, REMOVE_SCHEMA, supports_response=optional)
+    hass.services.async_register(DOMAIN, "sync_promos", sync_promos, SYNC_SCHEMA, supports_response=optional)
     hass.services.async_register(DOMAIN, "clear_promos", clear_promos, ENTRY_ONLY_SCHEMA, supports_response=optional)
     hass.services.async_register(
         DOMAIN, "list_promos", list_promos, ENTRY_ONLY_SCHEMA, supports_response=SupportsResponse.ONLY

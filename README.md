@@ -118,6 +118,35 @@ data:
   until: "2026-12-27"
 ```
 
+### `sigen_promo.sync_promos`
+
+Makes one label's upcoming promos match a list of windows, in a single save: missing
+windows are added, windows no longer listed are removed (promos already running are
+kept), and nothing is saved if they already match. Use it when a source lists several
+windows at once, such as a calendar. It reports only real changes in `added` and
+`removed`.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `label` | yes | The promos this action manages. Others are left alone. |
+| `windows` | yes | List of `{start, end}`, e.g. the events from `calendar.get_events`. |
+| `buy` / `sell` | one of them | Prices for every window, as in `add_promo`. |
+| `on_overlap` | no | `replace` (default), `error` or `allow`. |
+
+```yaml
+- action: calendar.get_events
+  target:
+    entity_id: calendar.edf_energy_XXXX_free_electricity_session
+  data:
+    duration: { days: 7 }
+  response_variable: sessions
+- action: sigen_promo.sync_promos
+  data:
+    label: EDF free electricity
+    windows: "{{ sessions['calendar.edf_energy_XXXX_free_electricity_session'].events }}"
+    buy: 0
+```
+
 ### `sigen_promo.remove_promo`
 
 Removes promos by `label`, by `start`–`end` window (overlapping promos), or both.
@@ -136,8 +165,9 @@ Returns every current and upcoming promo (response only).
 Keeps one promo, labelled `Axle event`, in line with the next Axle event: added when
 Axle announces it, moved if it changes, removed if it's cancelled (a promo that has
 already started is left alone). It re-checks every 30 minutes in case a save failed,
-and does nothing while the Axle integration is unavailable. EDF free electricity and
-Sunday Saver work the same way with their start/end sensors and a `buy` price.
+and does nothing while the Axle integration is unavailable. For sources with a calendar
+of sessions, such as EDF free electricity, use `sync_promos` with `calendar.get_events`
+instead (see above): it sets every announced session, not just the next one.
 
 ```yaml
 alias: "Sigen promo: Axle VPP event"
