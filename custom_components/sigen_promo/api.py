@@ -184,12 +184,16 @@ class SigenClient:
         return int((await self.station_info())["stationId"])
 
     async def station_info(self, station: int | None = None) -> dict[str, Any]:
-        """A station's details (stationId, stationShowName, timeZoneName, ...).
+        """A station's details (stationId, stationShowName, timeZoneName, currencyCode, ...).
 
-        Without an id, the account's home station.
+        Without an id, the account's home station. This is the call the Sigen app makes;
+        /device/owner/station/{id} leaves out currencyCode.
         """
-        path = f"/device/owner/station/{station}" if station else "/device/owner/station/home"
-        return await self._call("GET", path)
+        params = {"stationId": station} if station else None
+        info = await self._call("GET", "/device/owner/station/home", params=params) or {}
+        if station and str(info.get("stationId")) != str(station):
+            raise SigenRefused(f"Station {station} isn't on this account")
+        return info
 
     async def logout(self) -> None:
         """End this login session with the token we have, without logging in first.
