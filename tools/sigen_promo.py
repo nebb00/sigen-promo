@@ -344,13 +344,13 @@ def build_parser() -> argparse.ArgumentParser:
     a = sub.add_parser("add", parents=[conn, write], help="add or change a promo", formatter_class=fmt,
         description=
         "Add a promo. If one already exists with the same date and times, its prices and\n"
-        "repeat are replaced instead. Give --buy, --sell or both; prices are in your\n"
-        "tariff's units (as in the Sigen app) and can't be negative.",
+        "repeat are replaced instead. Give --buy, --sell or both. Prices are per kWh in\n"
+        "the station's main currency unit (0.15, not 15, for 15p or 15c) and can't be negative.",
         epilog=
         "examples:\n"
         "  sigen_promo.py add 2026-11-05 03:00 04:00 --buy 0              free import, once\n"
-        "  sigen_promo.py add 2026-11-05 16:00 19:00 --sell 25 --daily --until 2026-11-30\n"
-        "  sigen_promo.py add 2026-11-07 00:00 24:00 --buy 7 --sell 15 --weekly sat,sun --until 2026-12-27")
+        "  sigen_promo.py add 2026-11-05 16:00 19:00 --sell 0.25 --daily --until 2026-11-30\n"
+        "  sigen_promo.py add 2026-11-07 00:00 24:00 --buy 0.07 --sell 0.15 --weekly sat,sun --until 2026-12-27")
     a.add_argument("date", type=arg_date, help="day of the promo, or first day if it repeats (YYYY-MM-DD)")
     a.add_argument("start", type=arg_time, help="start time, HH:MM")
     a.add_argument("end", type=arg_time, help="end time, HH:MM (24:00 for midnight)")

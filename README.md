@@ -54,7 +54,7 @@ change the region later with **⋮ → Reconfigure**.
 
 | Entity | What it shows |
 |---|---|
-| `sensor.sigen_promotional_tariffs_current_promo` | The promo running now, e.g. `Axle event · Sell 100`, or `None`. Attributes: `label`, `buy`, `sell`, `start`, `end`. |
+| `sensor.sigen_promotional_tariffs_current_promo` | The promo running now, e.g. `Axle event · Sell £1/kWh` (in your station's currency), or `None`. Attributes: `label`, `buy`, `sell`, `start`, `end`. |
 | `sensor.sigen_promotional_tariffs_next_promo` | When the next promo starts. Attributes: `label`, `end`, `buy`, `sell`. |
 | `sensor.sigen_promotional_tariffs_promos` | Number of current and upcoming promos. The `promos` attribute lists them all. |
 
@@ -90,8 +90,9 @@ scripts and automations.
 | `on_overlap` | no | `error` (default), `replace` (remove overlapping promos) or `allow` (keep both). |
 
 Adding a promo that already exists does nothing, so it's safe for automations that
-re-run. Prices are plain numbers in whatever units your Sigen tariff uses (the same numbers you'd
-type in the Sigen app), and can't be negative.
+re-run. Prices are per kWh in your station's **main currency unit**, as the Sigen API
+stores them: `0.15` means 0.15 of your currency (15p, 15c), not 15. They can't be negative.
+A price above 10 logs a warning, since it's almost certainly in the wrong unit.
 If the Sigen cloud can't be reached, the save is retried for about 1.5 minutes before
 the action fails.
 
@@ -100,7 +101,7 @@ action: sigen_promo.add_promo
 data:
   start: "{{ states('sensor.axle_energy_event_start') }}"
   end: "{{ states('sensor.axle_energy_event_end') }}"
-  sell: 100
+  sell: 1
   label: Axle event
   replace_label: true
   on_overlap: replace
@@ -169,6 +170,10 @@ and does nothing while the Axle integration is unavailable. For sources with a c
 of sessions, such as EDF free electricity, use `sync_promos` with `calendar.get_events`
 instead (see above): it sets every announced session, not just the next one.
 
+Axle controls your battery itself during an event, and gives about 30 minutes' notice,
+so this promo mostly matters if you want Sigen's optimiser to plan around the event too.
+Leave it out if you'd rather Axle had sole control.
+
 ```yaml
 alias: "Sigen promo: Axle VPP event"
 mode: queued
@@ -209,7 +214,7 @@ actions:
             data:
               start: "{{ start }}"
               end: "{{ end }}"
-              sell: 100
+              sell: 1
               label: Axle event
               replace_label: true
               on_overlap: replace

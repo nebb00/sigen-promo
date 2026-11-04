@@ -108,11 +108,11 @@
         },
         "buy": {
           "name": "Buy price",
-          "description": "Import price during the promo, in the same units as your Sigen tariff. Leave out to keep the normal import price."
+          "description": "Import price during the promo, per kWh in the station's main currency unit (0.15, not 15). Leave out to keep the normal import price."
         },
         "sell": {
           "name": "Sell price",
-          "description": "Export price during the promo, in the same units as your Sigen tariff. Leave out to keep the normal export price."
+          "description": "Export price during the promo, per kWh in the station's main currency unit (0.15, not 15). Leave out to keep the normal export price."
         },
         "label": {
           "name": "Label",
@@ -158,11 +158,11 @@
         },
         "buy": {
           "name": "Buy price",
-          "description": "Import price during each window, in the same units as your Sigen tariff. Leave out to keep the normal import price."
+          "description": "Import price during each window, per kWh in the station's main currency unit (0.15, not 15). Leave out to keep the normal import price."
         },
         "sell": {
           "name": "Sell price",
-          "description": "Export price during each window, in the same units as your Sigen tariff. Leave out to keep the normal export price."
+          "description": "Export price during each window, per kWh in the station's main currency unit (0.15, not 15). Leave out to keep the normal export price."
         },
         "on_overlap": {
           "name": "If it overlaps",

@@ -54,11 +54,12 @@ class PromoCountSensor(SigenPromoEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"promos": [self.coordinator.readable(p) for p in self.coordinator.data or []]}
+        coord = self.coordinator
+        return {"currency": coord.currency, "promos": [coord.readable(p) for p in coord.data or []]}
 
 
 class CurrentPromoSensor(_MinuteTick, SensorEntity):
-    """The promo running now, e.g. 'Axle event · Sell 100', or 'None'."""
+    """The promo running now, e.g. 'Axle event · Sell £1/kWh', or 'None'."""
 
     _attr_translation_key = "current_promo"
 
@@ -76,7 +77,7 @@ class CurrentPromoSensor(_MinuteTick, SensorEntity):
             return NONE_RUNNING
         coord = self.coordinator
         texts = [
-            f"{coord.label_of(p) or UNLABELLED} · {price_text(p)}"
+            f"{coord.label_of(p) or UNLABELLED} · {price_text(p, coord.currency)}"
             for _, _, p in active
         ]
         return " + ".join(texts)[:255]

@@ -52,7 +52,8 @@ Every command has its own help: `python3 tools/sigen_promo.py add -h`.
 | `--station ID` | Use a different station (see below). |
 
 Give `--buy`, `--sell` or both. Leaving one out means the promo doesn't touch that
-price. Prices are plain numbers in whatever units your Sigen tariff uses (the same numbers you'd type in the Sigen app), and can't be negative.
+price. Prices are per kWh in your station's main currency unit, as the API stores them: `0.15`
+means 0.15 of your currency (15p, 15c), not 15. They can't be negative.
 
 If a promo with the same date and start/end times already exists, `add` replaces it,
 which is how you change a promo's prices.
@@ -62,10 +63,10 @@ which is how you change a promo's prices.
 python3 tools/sigen_promo.py add 2026-11-05 03:00 04:00 --buy 0
 
 # Export at 25p, 4pm-7pm every day for the rest of November
-python3 tools/sigen_promo.py add 2026-11-05 16:00 19:00 --sell 25 --daily --until 2026-11-30
+python3 tools/sigen_promo.py add 2026-11-05 16:00 19:00 --sell 0.25 --daily --until 2026-11-30
 
 # Weekends all day: import 7p, export 15p, until the end of the year
-python3 tools/sigen_promo.py add 2026-11-07 00:00 24:00 --buy 7 --sell 15 --weekly sat,sun --until 2026-12-27
+python3 tools/sigen_promo.py add 2026-11-07 00:00 24:00 --buy 0.07 --sell 0.15 --weekly sat,sun --until 2026-12-27
 ```
 
 ### `list [--json]`

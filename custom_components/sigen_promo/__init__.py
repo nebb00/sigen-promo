@@ -110,7 +110,8 @@ type SigenConfigEntry = ConfigEntry[SigenPromoCoordinator]
 class SigenPromoCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     """Holds the station's current and upcoming promos, and the labels HA gave them."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: SigenClient, tz: tzinfo) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: SigenClient, tz: tzinfo, currency: str = ""
+    ) -> None:
         minutes = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_MINUTES)
         super().__init__(
             hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=timedelta(minutes=minutes)
@@ -118,6 +119,8 @@ class SigenPromoCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.client = client
         self.station: int = entry.data[CONF_STATION_ID]
         self.tz = tz
+        # Prices are per kWh in the station's main currency unit (e.g. pounds, not pence).
+        self.currency = currency
         # Sigen promos have no name field, so labels live here, keyed by promo_key().
         self._store: Store[dict[str, str]] = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.labels")
         self.labels: dict[str, str] = {}
@@ -149,7 +152,7 @@ class SigenPromoCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         return self.labels.get(promo_key(p))
 
     def readable(self, p: dict[str, Any]) -> dict[str, Any]:
-        return readable(p, self.label_of(p), self.now())
+        return readable(p, self.label_of(p), self.now(), self.currency)
 
     async def async_load_labels(self) -> None:
         self.labels = await self._store.async_load() or {}
@@ -213,6 +216,21 @@ def _started(p: dict[str, Any], coord: SigenPromoCoordinator) -> bool:
     return first_start(p, coord.tz) <= coord.now()
 
 
+# Prices are per kWh in the station's main currency unit (0.15, not 15, for 15
+# hundredths). Anything above this is almost certainly in the wrong unit.
+HIGH_PRICE = 10
+
+
+def _warn_high(coord: SigenPromoCoordinator, buy: float | None, sell: float | None) -> None:
+    for name, value in (("buy", buy), ("sell", sell)):
+        if value is not None and value > HIGH_PRICE:
+            _LOGGER.warning(
+                "%s price %s%g/kWh is very high. Prices are in the station's main currency "
+                "unit per kWh (0.15, not 15), as shown in the Sigen app",
+                name.capitalize(), coord.currency, value,
+            )
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register the actions once, for all entries."""
 
@@ -240,6 +258,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         label = data.get("label")
         if buy is None and sell is None:
             raise HomeAssistantError("Give buy, sell or both")
+        _warn_high(coord, buy, sell)
         if data["replace_label"] and not label:
             raise HomeAssistantError("replace_label needs a label")
         start, end = local(data["start"], coord), local(data["end"], coord)
@@ -298,7 +317,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             if clashes and mode == OVERLAP_ERROR:
                 raise HomeAssistantError(
                     "Overlaps existing promo(s): "
-                    + "; ".join(describe(c, coord.label_of(c)) for c in clashes)
+                    + "; ".join(describe(c, coord.label_of(c), coord.currency) for c in clashes)
                     + ". Remove them first, or set on_overlap to replace or allow."
                 )
             if mode == OVERLAP_REPLACE:
@@ -313,7 +332,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         after = await coord.change(edit, labels)
         return {
             "added": [coord.readable(p) for p in new],
-            "removed": [readable(p, before.get(promo_key(p)), coord.now()) for p in replaced],
+            "removed": [readable(p, before.get(promo_key(p)), coord.now(), coord.currency) for p in replaced],
             "promos": [coord.readable(p) for p in after],
         }
 
@@ -328,6 +347,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         coord = coordinator_for(call)
         data = call.data
         buy, sell, label = data.get("buy"), data.get("sell"), data["label"]
+        _warn_high(coord, buy, sell)
         if buy is None and sell is None:
             raise HomeAssistantError("Give buy, sell or both")
         now = coord.now()
@@ -360,7 +380,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             if clashes and mode == OVERLAP_ERROR:
                 raise HomeAssistantError(
                     "Overlaps existing promo(s): "
-                    + "; ".join(describe(c, coord.label_of(c)) for c in clashes)
+                    + "; ".join(describe(c, coord.label_of(c), coord.currency) for c in clashes)
                     + ". Remove them first, or set on_overlap to replace or allow."
                 )
             if mode == OVERLAP_REPLACE:
@@ -376,7 +396,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         after = await coord.change(edit, {promo_key(p): label for p in wanted})
         return {
             "added": [coord.readable(p) for p in added],
-            "removed": [readable(p, before.get(promo_key(p)), coord.now()) for p in removed],
+            "removed": [readable(p, before.get(promo_key(p)), coord.now(), coord.currency) for p in removed],
             "promos": [coord.readable(p) for p in after],
         }
 
@@ -408,7 +428,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         before = dict(coord.labels)
         after = await coord.change(edit)
         return {
-            "removed": [readable(p, before.get(promo_key(p)), coord.now()) for p in removed],
+            "removed": [readable(p, before.get(promo_key(p)), coord.now(), coord.currency) for p in removed],
             "promos": [coord.readable(p) for p in after],
         }
 
@@ -423,7 +443,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         before = dict(coord.labels)
         await coord.change(edit)
         return {
-            "removed": [readable(p, before.get(promo_key(p)), coord.now()) for p in removed],
+            "removed": [readable(p, before.get(promo_key(p)), coord.now(), coord.currency) for p in removed],
             "promos": [],
         }
 
@@ -463,15 +483,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: SigenConfigEntry) -> boo
     client = _client(hass, entry, save_tokens)
     # Promo times are in the station's local time; fall back to HA's timezone.
     tz = dt_util.get_default_time_zone()
+    currency = ""
     try:
         info = await client.station_info(entry.data[CONF_STATION_ID])
         tz = dt_util.get_time_zone(info.get("timeZoneName") or "") or tz
+        currency = str(info.get("currencyCode") or "")
     except SigenAuthError as err:
         raise ConfigEntryAuthFailed(str(err)) from err
     except SigenError as err:
-        _LOGGER.debug("Couldn't read station timezone, using HA's: %s", err)
+        _LOGGER.debug("Couldn't read station details, using HA's timezone: %s", err)
 
-    coordinator = SigenPromoCoordinator(hass, entry, client, tz)
+    coordinator = SigenPromoCoordinator(hass, entry, client, tz, currency)
     await coordinator.async_load_labels()
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator

@@ -17,26 +17,33 @@ def weekday_names(p: dict[str, Any]) -> list[str]:
     return [DAY_NAMES.get(int(d), d) for d in str(p["weekRange"]).split(",")]
 
 
-def price_text(p: dict[str, Any]) -> str:
-    """e.g. 'Buy 0', 'Sell 100' or 'Buy 7 · Sell 15' (prices as set, in the tariff's units)."""
+def money(value: float, currency: str = "") -> str:
+    """A price per kWh in the station's currency, e.g. '£0.15/kWh', or '0.15' with no currency."""
+    return f"{currency}{value:g}/kWh" if currency else f"{value:g}"
+
+
+def price_text(p: dict[str, Any], currency: str = "") -> str:
+    """e.g. 'Buy £0/kWh', 'Sell £1.5/kWh' or 'Buy £0.07/kWh · Sell £0.15/kWh'."""
     parts = []
     if p.get("buyPrice") is not None:
-        parts.append(f"Buy {p['buyPrice']:g}")
+        parts.append(f"Buy {money(p['buyPrice'], currency)}")
     if p.get("sellPrice") is not None:
-        parts.append(f"Sell {p['sellPrice']:g}")
+        parts.append(f"Sell {money(p['sellPrice'], currency)}")
     return " · ".join(parts)
 
 
-def describe(p: dict[str, Any], label: str | None = None) -> str:
+def describe(p: dict[str, Any], label: str | None = None, currency: str = "") -> str:
     when = p["dt"]
     if p["repeatType"] != 0:
         days = ",".join(weekday_names(p)) or "daily"
         when += f" {days} to {p.get('endDate')}"
-    text = f"{when} {p['timeRange']} {price_text(p) or 'no prices'}"
+    text = f"{when} {p['timeRange']} {price_text(p, currency) or 'no prices'}"
     return f"{label}: {text}" if label else text
 
 
-def readable(p: dict[str, Any], label: str | None, now: datetime) -> dict[str, Any]:
+def readable(
+    p: dict[str, Any], label: str | None, now: datetime, currency: str = ""
+) -> dict[str, Any]:
     """A promo as plain fields for attributes and action responses."""
     nxt = next_occurrence(p, now)
     start, end = p["timeRange"].split("-")
@@ -52,7 +59,7 @@ def readable(p: dict[str, Any], label: str | None, now: datetime) -> dict[str, A
         "sell": p.get("sellPrice"),
         "next_start": nxt[0].isoformat() if nxt else None,
         "next_end": nxt[1].isoformat() if nxt else None,
-        "summary": describe(p),
+        "summary": describe(p, currency=currency),
     }
 
 

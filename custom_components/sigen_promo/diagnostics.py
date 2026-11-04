@@ -18,6 +18,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: SigenCo
         "entry": {"data": async_redact_data(dict(entry.data), TO_REDACT), "options": dict(entry.options)},
         "region": entry.data.get("region", "eu"),
         "station_timezone": str(coord.tz),
+        "currency": coord.currency,
         "update_interval": str(coord.update_interval),
         "last_update_success": coord.last_update_success,
         "promos": coord.data,
